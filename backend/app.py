@@ -11,8 +11,16 @@ from adb_monitor import adb_monitor
 from behavior_engine import BehaviorEngine
 from email_notifier import send_alert_email, is_configured as email_configured
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/')
 CORS(app)
+
+@app.route('/')
+def serve_index():
+    return send_file(os.path.join(app.static_folder, 'index.html'))
+
+@app.errorhandler(404)
+def not_found(e):
+    return send_file(os.path.join(app.static_folder, 'index.html'))
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///adb_forensics.db')
 # Render uses postgres:// which SQLAlchemy 1.4+ requires to be postgresql://
