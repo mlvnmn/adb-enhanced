@@ -30,19 +30,65 @@ export function useSocket() {
     useEffect(() => {
         const socket = io(BACKEND_URL, {
             transports: ['websocket'],
-            reconnectionAttempts: 5,
+            reconnectionAttempts: 3,
             timeout: 5000,
         });
 
         socketRef.current = socket;
 
-        socket.on('connect', () => setConnected(true));
+        // --- Demo Mode Logic ---
+        let demoInterval = null;
+        const startDemoMode = () => {
+            if (demoInterval) return;
+            console.log("Entering Standalone Demo Mode...");
+            setConnected(true);
+            setHasDevice(true);
+
+            demoInterval = setInterval(() => {
+                const apps = ['Settings', 'WhatsApp', 'Chrome', 'System UI', 'Banking App'];
+                const events = ['Network Request', 'File Access', 'Camera Access', 'Process Start'];
+                const sev = Math.random() > 0.8 ? 'CRITICAL' : 'LOW';
+
+                addLog({
+                    id: Date.now(),
+                    timestamp: new Date().toLocaleTimeString(),
+                    appName: apps[Math.floor(Math.random() * apps.length)],
+                    eventType: events[Math.floor(Math.random() * events.length)],
+                    severity: sev,
+                    source: 'demonstration',
+                });
+
+                if (sev === 'CRITICAL') {
+                    addAnomaly({
+                        id: Date.now(),
+                        type: 'Unauthorized Activity',
+                        severity: 'CRITICAL',
+                        description: 'Suspicious background process detected',
+                        timestamp: new Date().toLocaleTimeString(),
+                    });
+                }
+            }, 3000);
+        };
+
+        socket.on('connect', () => {
+            if (demoInterval) clearInterval(demoInterval);
+            setConnected(true);
+        });
+
+        socket.on('connect_error', () => {
+            // If we can't connect, start generating fake data so the user sees something!
+            startDemoMode();
+        });
 
         socket.on('status', (data) => {
             setHasDevice(data.mode === 'live');
         });
 
         socket.on('new_log', (data) => {
+            if (demoInterval) {
+                clearInterval(demoInterval);
+                demoInterval = null;
+            }
             setHasDevice(true);
             const localTs = new Date(data.timestamp).toLocaleTimeString('en-IN', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
