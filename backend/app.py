@@ -15,12 +15,66 @@ app = Flask(__name__)
 CORS(app)
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///adb_forensics.db')
+# Render uses postgres:// which SQLAlchemy 1.4+ requires to be postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'forensic-secret-key'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'forensic-secret-key')
 
 db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+# ===== Mock Data for Render Demo =====
+def background_mock_stream():
+    """Generates fake logs if running on Render for demo purposes."""
+    import random
+    import time
+    with app.app_context():
+        # Ensure at least one dummy device exists
+        if not AndroidDevice.query.first():
+            db.session.add(AndroidDevice(serial='RENDER-DEMO-001', model='Virtual Pixel 7', status='online'))
+            db.session.commit()
+            
+        device = AndroidDevice.query.first()
+        apps_list = ['System UI', 'WhatsApp', 'Chrome', 'Banking App', 'Settings', 'Telegram', 'Instagram']
+        events_list = ['Network Request', 'File Access', 'Permission Update', 'Process Event', 'Camera Access']
+        
+        while True:
+            try:
+                now = datetime.utcnow()
+                app_choice = random.choice(apps_list)
+                event_choice = random.choice(events_list)
+                # Randomly choose severity (CRITICAL is 10% chance)
+                severity = 'LOW' if random.random() > 0.15 else 'CRITICAL'
+                
+                log = ActivityLog(
+                    device_id=device.id, timestamp=now,
+                    app_name=app_choice, event_type=event_choice,
+                    severity=severity, raw_data=f"Demo: Observed {event_choice} from {app_choice}",
+                    is_anomaly=(severity == 'CRITICAL'),
+                )
+                db.session.add(log)
+                if severity == 'CRITICAL':
+                    db.session.add(Alert(alert_type='Unauthorized Activity', 
+                                       description=f"Demo: Critical {event_choice} in {app_choice}", 
+                                       severity='CRITICAL'))
+                db.session.commit()
+                
+                socketio.emit('new_log', {
+                    'id': log.id, 'timestamp': now.isoformat() + 'Z',
+                    'app_name': app_choice, 'event_type': event_choice,
+                    'severity': severity, 'is_anomaly': (severity == 'CRITICAL'),
+                    'source': 'render_demo',
+                })
+                
+                # Periodically update stats
+                socketio.emit('stats_update', compute_stats())
+                
+            except Exception as e:
+                print(f"Mock error: {e}")
+            socketio.sleep(random.randint(2, 5))
 
 last_seen_raw = set()
 behavior_engine = None  # Initialized after app context
@@ -557,15 +611,16 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         behavior_engine = BehaviorEngine(db, m)
+    if os.environ.get('RENDER'):
+        socketio.start_background_task(background_mock_stream)
+        print('[RENDER] Running in Demo Mode with Mock Data')
+    else:
         sync_real_devices()
-        print('[DB] Tables ready (6 tables: users, android_devices, activity_logs, alerts, baselines, foreground_snapshots)')
-
-    socketio.start_background_task(background_device_scanner)
-    socketio.start_background_task(background_log_stream)
-    socketio.start_background_task(background_stats_emitter)
-    socketio.start_background_task(background_foreground_tracker)
-    socketio.start_background_task(background_behavior_analyzer)
-    print('[SERVER] Enhanced ADB Forensic Monitor running on http://localhost:5000')
-    print('[ENGINE] Behavior Analysis Engine: ACTIVE')
-    print(f'[EMAIL] Alert notifications: {"CONFIGURED" if email_configured() else "NOT CONFIGURED (set SMTP_USER, SMTP_PASS, ALERT_RECIPIENT env vars)"}')
+        socketio.start_background_task(background_device_scanner)
+        socketio.start_background_task(background_log_stream)
+        socketio.start_background_task(background_stats_emitter)
+        socketio.start_background_task(background_foreground_tracker)
+        socketio.start_background_task(background_behavior_analyzer)
+    
+    print('[SERVER] Enhanced ADB Forensic Monitor running')
     socketio.run(app, debug=False, port=5000, host='0.0.0.0')
