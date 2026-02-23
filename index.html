@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced ADB Monitor | Digital Forensics</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-halved logo-icon"></i>
+                <span class="brand-text">ADB MONITOR</span>
+            </div>
+            <div class="section-label">CONNECTED DEVICES</div>
+            <ul class="device-list" id="deviceList">
+                <li class="device-item active">
+                    <div class="device-info">
+                        <span class="device-name">Pixel 7 Pro</span>
+                        <span class="device-id">ADB-192.168.1.45</span>
+                    </div>
+                    <span class="status-dot online"></span>
+                </li>
+                <li class="device-item">
+                    <div class="device-info">
+                        <span class="device-name">Samsung S23</span>
+                        <span class="device-id">ADB-USBC-0042</span>
+                    </div>
+                    <span class="status-dot online"></span>
+                </li>
+                <li class="device-item disabled">
+                    <div class="device-info">
+                        <span class="device-name">OnePlus 11</span>
+                        <span class="device-id">ADB-USBC-9981</span>
+                    </div>
+                    <span class="status-dot offline"></span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="connection-stats">
+                    <span>Signals: 2 Active</span>
+                    <i class="fas fa-wifi text-cyan"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation -->
+            <header class="top-nav">
+                <div class="nav-left">
+                    <h1 class="page-title">Forensic Intelligence Dashboard</h1>
+                    <span class="system-status">SYSTEM SECURE // ENCRYPTION AES-256</span>
+                </div>
+                <div class="nav-right">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search activities...">
+                    </div>
+                    <div class="alert-bell-container">
+                        <i class="fas fa-bell alert-bell active" id="alertBell"></i>
+                        <span class="alert-label">CRITICAL ANOMALY ALERT</span>
+                    </div>
+                    <div class="user-profile">
+                        <div class="avatar">MJ</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Top Chart Area -->
+                <section class="chart-section glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <i class="fas fa-chart-line text-cyan"></i>
+                            <span>Behavioral Baseline Analysis</span>
+                        </div>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="dot baseline"></span> Baseline</span>
+                            <span class="legend-item"><span class="dot real-time"></span> Real-time Usage</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="behaviorChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Bottom Data Grid Area -->
+                <section class="data-grid-section glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <i class="fas fa-list-ul text-cyan"></i>
+                            <span>Live Forensic Activity Log</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="btn-outline">
+                                <i class="fas fa-download"></i> EXPORT CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="activityLog">
+                            <thead>
+                                <tr>
+                                    <th>TIMESTAMP</th>
+                                    <th>APP NAME</th>
+                                    <th>EVENT TYPE</th>
+                                    <th>SEVERITY</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logBody">
+                                <!-- Live logs will be injected here -->
+                                <tr>
+                                    <td class="mono">23:28:45.001</td>
+                                    <td>com.android.systemui</td>
+                                    <td>Process Start</td>
+                                    <td><span class="severity low">LOW</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="mono">23:28:46.412</td>
+                                    <td>com.crypto.wallet</td>
+                                    <td>Network Socket Open</td>
+                                    <td><span class="severity medium">MEDIUM</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="mono">23:28:47.882</td>
+                                    <td>Unknown-1029</td>
+                                    <td>Buffer Overflow Attempt</td>
+                                    <td><span class="severity high">CRITICAL</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Background Decoration -->
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+flask==3.1.0
+flask-socketio==5.5.1
+flask-cors==5.0.1
+flask-sqlalchemy==3.1.1
+psycopg2-binary==2.9.10
+pure-python-adb==0.3.0.dev0
+eventlet==0.37.0
+fpdf2==2.8.3
