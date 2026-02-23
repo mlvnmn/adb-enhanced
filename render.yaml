@@ -13,14 +13,16 @@ services:
           property: connectionString
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: RENDER
+        value: "true"
 
   # Frontend Service
-  - type: static
+  - type: web
     name: adb-forensic-frontend
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    publishPath: dist
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
         fromService:
