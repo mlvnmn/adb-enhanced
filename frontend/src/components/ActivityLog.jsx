@@ -47,7 +47,7 @@ export default function ActivityLog({ logs, hasDevice }) {
                         <thead>
                             <tr>
                                 <th>TIMESTAMP</th>
-                                <th>APP / PROCESS NAME</th>
+                                <th>SOURCE</th>
                                 <th>ACTIVITY TYPE</th>
                                 <th>SEVERITY LEVEL</th>
                             </tr>

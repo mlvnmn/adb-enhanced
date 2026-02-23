@@ -2,8 +2,34 @@ import subprocess
 import re
 import os
 
-# Path to adb.exe on this system
-ADB_PATH = r"C:\Users\melvi\Downloads\platform-tools\adb.exe"
+# Path to adb.exe - will be discovered dynamically
+ADB_PATH = None
+
+def discover_adb():
+    """Attempts to find the adb binary in common locations."""
+    # current directory of this script (backend/)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    local_paths = [
+        os.path.join(base_dir, "adb.exe"),
+        os.path.join(base_dir, "platform-tools", "adb.exe"),
+        os.path.join(os.path.dirname(base_dir), "platform-tools", "adb.exe"),
+        "adb.exe",
+        "platform-tools/adb.exe",
+    ]
+    for p in local_paths:
+        if os.path.exists(p):
+            return os.path.abspath(p)
+    
+    # 2. Check environment variable
+    env_adb = os.environ.get("ADB_PATH")
+    if env_adb and os.path.exists(env_adb):
+        return env_adb
+
+    # 3. Fallback to just 'adb' (expects it in system PATH)
+    return "adb"
+
+ADB_PATH = discover_adb()
 
 # Known spyware / suspicious package patterns
 SPYWARE_PATTERNS = [
@@ -85,7 +111,103 @@ FRIENDLY_NAMES = {
     'FCM': 'Push Notifications (Firebase)',
     'WebView': 'Built-in Browser',
     'chromium': 'Chrome Engine',
+    # Samsung-specific
+    'PrivacyDashboard': 'Privacy Dashboard',
+    'Rivacydashboard': 'Privacy Dashboard',
+    'CustomerFeatureCommon': 'Samsung Feature Service',
+    'ORC': 'Samsung System Service',
+    'SemPersonalPageViewMediator': 'Samsung Home Screen',
+    'SamsungIME': 'Samsung Keyboard',
+    'SamsungCamera': 'Samsung Camera',
+    'SecSettings': 'Samsung Settings',
+    'SecLauncher': 'Samsung Home Launcher',
+    'SamsungAnalytics': 'Samsung Analytics',
+    'SDHMS': 'Samsung Device Health',
+    'SDHMSService': 'Samsung Health Monitor',
+    'SDHMS:LOAD': 'Samsung Health Monitor',
+    'Runestonesdkdev': 'Samsung SDK Service',
+    'RunestoneSDK': 'Samsung SDK Service',
+    'SmartClip': 'Samsung Smart Clipboard',
+    'Clipboard': 'Clipboard Manager',
+    'EdgeLighting': 'Edge Lighting Effect',
+    'GameSDK': 'Samsung Game Optimizer',
+    'GameDriver': 'Graphics Game Driver',
+    'KnoxGuard': 'Samsung Knox Security',
+    'MDM': 'Mobile Device Management',
+    'SPDClient': 'Device Protection',
+    'SmartManager': 'Device Performance Manager',
+    'OneUI': 'Samsung One UI',
+    'DEX': 'Samsung DeX Desktop',
+    'SFinder': 'Samsung Finder (Search)',
+    'Bixby': 'Samsung Bixby Assistant',
+    'FloatingFeature': 'Samsung Floating Features',
+    'GoodCatch': 'Samsung Error Reporter',
+    'PersonaManager': 'Samsung Secure Folder',
+    'SemEmergencyManager': 'Emergency Services',
+    'MultiWindow': 'Multi-Window Manager',
+    'MotionRecognition': 'Motion & Gestures',
+    'FaceService': 'Face Recognition',
+    'FingerprintManager': 'Fingerprint Scanner',
+    'BiometricService': 'Biometric Authentication',
+    # More system services
+    'ResourcesManager': 'Resource Manager',
+    'ViewRootImpl': 'UI Rendering Engine',
+    'DisplayManagerService': 'Display Manager',
+    'InputMethodManager': 'Keyboard Manager',
+    'AccessibilityManager': 'Accessibility Service',
+    'UsageStatsService': 'App Usage Tracker',
+    'BroadcastQueue': 'System Broadcast',
+    'BackupManager': 'Backup Service',
+    'DeviceStorageMonitor': 'Storage Monitor',
+    'NetworkPolicy': 'Network Policy',
+    'StatusBar': 'Status Bar',
+    'recents': 'Recent Apps',
+    'Choreographer': 'UI Frame Scheduler',
+    'RenderThread': 'Graphics Renderer',
+    'PhoneStatusBar': 'Phone Status Bar',
+    'ProcessStats': 'Process Statistics',
+
 }
+
+# Keyword-based fallback for tags not in the dictionary
+KEYWORD_FRIENDLY = [
+    ('camera', 'Camera Service'),
+    ('battery', 'Battery Service'),
+    ('wifi', 'WiFi Service'),
+    ('bluetooth', 'Bluetooth Service'),
+    ('audio', 'Audio Service'),
+    ('media', 'Media Service'),
+    ('display', 'Display Service'),
+    ('sensor', 'Sensor Service'),
+    ('location', 'Location Service'),
+    ('network', 'Network Service'),
+    ('telephon', 'Phone Service'),
+    ('keyboard', 'Keyboard Service'),
+    ('input', 'Input Service'),
+    ('launcher', 'Home Launcher'),
+    ('settings', 'Device Settings'),
+    ('notification', 'Notification Service'),
+    ('permission', 'Permission Manager'),
+    ('security', 'Security Service'),
+    ('backup', 'Backup Service'),
+    ('download', 'Download Manager'),
+    ('update', 'Update Service'),
+    ('sync', 'Sync Service'),
+    ('power', 'Power Manager'),
+    ('thermal', 'Temperature Monitor'),
+    ('storage', 'Storage Manager'),
+    ('process', 'Process Manager'),
+    ('activity', 'App Activity Manager'),
+    ('package', 'Package Manager'),
+    ('window', 'Window Manager'),
+    ('clipboard', 'Clipboard'),
+    ('alarm', 'Alarm Scheduler'),
+    ('scheduler', 'Task Scheduler'),
+    ('render', 'Graphics Renderer'),
+    ('gesture', 'Gesture Handler'),
+    ('touch', 'Touch Handler'),
+    ('privacy', 'Privacy Dashboard'),
+]
 
 # Sensitive app categories for time-window enforcement
 SENSITIVE_APPS = {
@@ -306,16 +428,17 @@ class ADBMonitor:
         if tag in FRIENDLY_NAMES:
             return FRIENDLY_NAMES[tag]
 
+        tag_lower = tag.lower()
+
         # 2. Partial match (for tags like ORC/something)
         for key, friendly in FRIENDLY_NAMES.items():
-            if key.lower() in tag.lower():
+            if key.lower() in tag_lower:
                 return friendly
 
         # 3. Package name pattern (com.example.app → App)
         if '.' in tag and tag.count('.') >= 2:
             parts = tag.split('.')
             name = parts[-1]
-            # Known company prefixes
             company_map = {
                 'google': 'Google', 'samsung': 'Samsung', 'sec': 'Samsung',
                 'android': 'Android', 'facebook': 'Facebook', 'meta': 'Meta',
@@ -331,9 +454,16 @@ class ADBMonitor:
             clean = clean.replace('_', ' ').title()
             return f'{company}{clean}'.strip()
 
-        # 4. CamelCase split (SurfaceFlinger → Surface Flinger)
+        # 4. Keyword-based fallback
+        for keyword, friendly in KEYWORD_FRIENDLY:
+            if keyword in tag_lower:
+                return friendly
+
+        # 5. CamelCase split + cleanup
         clean = re.sub(r'([a-z])([A-Z])', r'\1 \2', tag)
-        clean = clean.replace('_', ' ').replace('/', ' / ').title()
+        clean = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', clean)
+        clean = clean.replace('_', ' ').replace('/', ' ').replace(':', ' ')
+        clean = ' '.join(w.capitalize() for w in clean.split())
         return clean
 
     def _classify_event(self, tag, message):

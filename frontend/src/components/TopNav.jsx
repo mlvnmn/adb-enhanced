@@ -37,18 +37,6 @@ export default function TopNav({ connected, hasDevice, socket }) {
                     <span className="ws-dot"></span>
                     {statusLabel}
                 </div>
-                <div className="search-box">
-                    <i className="fa-solid fa-search" style={{ color: 'var(--text-dim)' }}></i>
-                    <input type="text" placeholder="Search activities..." />
-                </div>
-                <div className="alert-bell-container" title="Critical Anomaly Alerts">
-                    <i className={`fa-solid fa-bell alert-bell ${alertCount > 0 ? 'active' : ''}`}></i>
-                    {alertCount > 0 && (
-                        <span className="alert-count-badge">{alertCount > 99 ? '99+' : alertCount}</span>
-                    )}
-                    <span className="alert-label">CRITICAL ALERT</span>
-                </div>
-                <div className="avatar">MJ</div>
             </div>
         </header>
     );
